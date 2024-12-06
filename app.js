@@ -1,6 +1,7 @@
 const express = require('express');
 const app = express();
 const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
 const cookieParser = require('cookie-parser');
 const userModel = require("./models/user")
 
@@ -20,5 +21,6 @@ app.post('/register' ,async function(req, res){
     let user = await userModel.findOne({email});
     if(user) return res.status(500).send("Email Already Registered")
 
+    bcrypt.genSalt(10 , )
 })
 app.listen(3000);
