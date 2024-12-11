@@ -26,6 +26,11 @@ app.get('/logout' , function(req, res){
   res.redirect('/login');
 })
 
+app.get('/profile' , isLoggedIn , async function(req, res){
+  let user = await userModel.findOne({email: req.user.email});
+  res.render('profile' , {user});
+})
+
 app.post('/register' ,async function(req, res){
     let {username , name , email , age , password } = req.body;
     let user = await userModel.findOne({email});
@@ -49,25 +54,28 @@ app.post('/register' ,async function(req, res){
     })
    
 })
-
 app.post('/login' ,async function(req, res){
   let { email , password } = req.body;
   let user = await userModel.findOne({email});
   if(!user) return res.status(500).send("Something Went Wrong");
 
   bcrypt.compare(password , user.password ,function(err, result){
-    if(result) res.status(200).send("You Can Login")
+    if(result) {
+      let token = jwt.sign({email: email , userid: user._id}, "secret-key");
+      res.cookie("token" , token);
+      res.status(200).redirect('/profile');
+    }
       else res.redirect('/login');
   })
 })
 
 // Use as a MiddleWare for Our Routes Protection
 function isLoggedIn(req, res, next){
-  if(req.cookies.token === "") res.send("You Must Loggin First")
-    else{
+  if(req.cookies.token === "")res.redirect("/login")
+  else {
   let data = jwt.verify(req.cookies.token , "secret-key");
   req.user = data;
+  next();
 }
-next()
 }
 app.listen(3000);
