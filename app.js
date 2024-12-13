@@ -5,6 +5,7 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const cookieParser = require('cookie-parser');
 const userModel = require("./models/user")
+const postModel = require("./models/post")
 
 
 app.set("view engine" , "ejs");
@@ -27,18 +28,32 @@ app.get('/logout' , function(req, res){
 })
 
 app.get('/profile' , isLoggedIn , async function(req, res){
-  let user = await userModel.findOne({email: req.user.email});
+  let user = await userModel.findOne({email: req.user.email}).populate("posts");
   res.render('profile' , {user});
 })
+
+app.post('/post' , isLoggedIn , async function(req, res){
+  let user = await userModel.findOne({email: req.user.email});
+   let {content} = req.body;
+  let post = await postModel.create({
+    user: user._id,
+    content
+  })
+
+  user.posts.push(post._id);
+  await user.save();
+  res.redirect('/profile');
+})
+
 
 app.post('/register' ,async function(req, res){
     let {username , name , email , age , password } = req.body;
     let user = await userModel.findOne({email});
     if(user) return res.status(500).send("Email Already Registered")
 
-    bcrypt.genSalt(10, function(err, salt){
-      bcrypt.hash(password , salt , function(err, hash){
-        let user = userModel.create({
+    bcrypt.genSalt(10,  function(err, salt){
+      bcrypt.hash(password , salt , async function(err, hash){
+        let user = await userModel.create({
             username, 
             name,
             email,
