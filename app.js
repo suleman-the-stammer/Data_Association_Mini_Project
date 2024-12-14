@@ -5,7 +5,8 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const cookieParser = require('cookie-parser');
 const userModel = require("./models/user")
-const postModel = require("./models/post")
+const postModel = require("./models/post");
+const user = require('./models/user');
 
 
 app.set("view engine" , "ejs");
@@ -15,8 +16,14 @@ app.use(cookieParser());
 
 
 app.get('/' , function(req ,res){
-    res.render("index");
+    res.render("login");
 })
+
+app.get('/register' , function(req ,res){
+  res.render("index");
+})
+
+
 
 app.get('/login' , function(req ,res){
   res.render("login");
@@ -27,10 +34,39 @@ app.get('/logout' , function(req, res){
   res.redirect('/login');
 })
 
+app.get('/edit/:id' , isLoggedIn , async function (req, res) {
+  let post = await postModel.findOne({_id: req.params.id});
+  res.render("edit" , {post})
+})
+
+app.post('/update/:id' , isLoggedIn , async function (req, res) {
+  let post = await postModel.findOneAndUpdate({_id: req.params.id} , {content: req.body.content});
+  res.redirect('/profile');
+})
+
+app.get('/delete/:id' , isLoggedIn , async function (req, res) {
+  let post = await postModel.findOneAndDelete({_id: req.params.id});
+  res.redirect('/profile');
+})
+
 app.get('/profile' , isLoggedIn , async function(req, res){
   let user = await userModel.findOne({email: req.user.email}).populate("posts");
   res.render('profile' , {user});
 })
+
+app.get('/like/:id' , isLoggedIn , async function(req, res){
+  let post = await postModel.findOne({_id: req.params.id}).populate("user");
+  
+  if (post.likes.indexOf(req.user.userid) === -1) {
+    post.likes.push(req.user.userid);
+  } else{
+    post.likes.splice( post.likes.indexOf(req.user.userid)  , 1)
+  }
+
+   await post.save();
+   res.redirect('/profile');
+
+  })
 
 app.post('/post' , isLoggedIn , async function(req, res){
   let user = await userModel.findOne({email: req.user.email});
