@@ -25,15 +25,40 @@ app.get('/' , function(req ,res){
 })
 
 
-app.get('/profile/upload' , function(req ,res){
-    res.render("profilepic");
-})
+// app.get('/profile/upload' , function(req ,res){
+//     res.render("profilepic");
+// })
 
-app.post('/upload' , isLoggedIn, upload.single("images"),async function(req ,res){
-  let user = await userModel.findOne({email: req.user.email});
-  user.profileDp = req.file.filename;
-  await user.save();
-  res.redirect('/profile');
+// app.post('/upload' , isLoggedIn, upload.single("images"),async function(req ,res){
+//   let user = await userModel.findOne({email: req.user.email});
+// })
+
+app.post('/register' , upload.single("images"), async function(req, res){
+  let {username , name , email , age , password } = req.body;
+  let user = await userModel.findOne({email});
+  if(user) return res.status(500).send("Email Already Registered")
+
+  bcrypt.genSalt(10,  function(err, salt){
+    bcrypt.hash(password , salt , async function(err, hash){
+      let user = await userModel.create({
+          username, 
+          name,
+          email,
+          age,
+          password: hash
+          //Post is By Default an Blank Array So wo don't need to Create it there.
+      });
+
+      let token = jwt.sign({email: email , userid: user._id}, "secret-key");
+      res.cookie("token" , token);
+
+      user.profileDp = req.file.filename;
+      await user.save();
+      res.redirect('/profile');
+
+    })
+  })
+ 
 })
 
 app.get('/register' , function(req ,res){
@@ -100,29 +125,7 @@ app.post('/post' , isLoggedIn , async function(req, res){
 })
 
 
-app.post('/register' ,async function(req, res){
-    let {username , name , email , age , password } = req.body;
-    let user = await userModel.findOne({email});
-    if(user) return res.status(500).send("Email Already Registered")
 
-    bcrypt.genSalt(10,  function(err, salt){
-      bcrypt.hash(password , salt , async function(err, hash){
-        let user = await userModel.create({
-            username, 
-            name,
-            email,
-            age,
-            password: hash
-            //Post is By Default an Blank Array So wo don't need to Create it there.
-        });
-
-        let token = jwt.sign({email: email , userid: user._id}, "secret-key");
-        res.cookie("token" , token);
-        res.send("Registered");
-      })
-    })
-   
-})
 app.post('/login' ,async function(req, res){
   let { email , password } = req.body;
   let user = await userModel.findOne({email});
