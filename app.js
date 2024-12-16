@@ -7,21 +7,39 @@ const cookieParser = require('cookie-parser');
 const userModel = require("./models/user")
 const postModel = require("./models/post");
 const user = require('./models/user');
+const path = require('path');
+const upload = require("./config/multerconfig");
 
 
 app.set("view engine" , "ejs");
 app.use(express.json());
 app.use(express.urlencoded({extended: true}));
+app.use(express.static(path.join(__dirname , "Public")));
 app.use(cookieParser());
+
+
 
 
 app.get('/' , function(req ,res){
     res.render("login");
 })
 
+
+app.get('/profile/upload' , function(req ,res){
+    res.render("profilepic");
+})
+
+app.post('/upload' , isLoggedIn, upload.single("images"),async function(req ,res){
+  let user = await userModel.findOne({email: req.user.email});
+  user.profileDp = req.file.filename;
+  await user.save();
+  res.redirect('/profile');
+})
+
 app.get('/register' , function(req ,res){
   res.render("index");
 })
+
 
 
 
